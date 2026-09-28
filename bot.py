@@ -3,8 +3,14 @@ import json
 
 # ==================== 設定區 ====================
 TELEGRAM_BOT_TOKEN = "8609140332:AAFw48FjbJSEc0LDhE1C5UFUdt-B5BEjolc"
-CHAT_ID = "-1005478933926"                      # 已加上 -100 修正超級群組 ID
 API_URL = "https://pc28.help/api/kj.json?nbr=120"
+
+# 測試所有可能的 ID 組合
+TARGET_IDS = [
+    "-1004343189687",
+    "-1005478933926",
+    "-5478933926"
+]
 # ================================================
 
 def fetch_data():
@@ -16,27 +22,36 @@ def fetch_data():
         if response.status_code == 200:
             return response.json()
         else:
-            print(f"API 請求失敗: {response.status_code}")
+            print(f"API 請求失敗，狀態碼: {response.status_code}")
             return None
     except Exception as e:
-        print(f"獲取數據異常: {e}")
+        print(f"獲取數據時發生異常: {e}")
         return None
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "HTML"
-    }
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        res_data = response.json()
-        print(f"Telegram API 回應: {res_data}")
-        if not res_data.get("ok"):
-            print(f"發送失敗原因: {res_data.get('description')}")
-    except Exception as e:
-        print(f"發送訊息異常: {e}")
+    success = False
+
+    for chat_id in TARGET_IDS:
+        payload = {
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "HTML"
+        }
+        try:
+            print(f"嘗試發送到 ID: {chat_id} ...")
+            response = requests.post(url, json=payload, timeout=10)
+            res_data = response.json()
+            print(f"回應: {res_data}")
+            if res_data.get("ok"):
+                print(f"成功發送到 ID: {chat_id}")
+                success = True
+                break
+        except Exception as e:
+            print(f"發送到 {chat_id} 時發生異常: {e}")
+
+    if not success:
+        raise Exception("所有 Chat ID 發送均失敗，請檢查 Telegram 管理員權限！")
 
 def main():
     data = fetch_data()
