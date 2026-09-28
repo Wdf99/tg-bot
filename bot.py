@@ -8,7 +8,6 @@ API_URL = "https://pc28.help/api/kj.json?nbr=120"
 # ================================================
 
 def fetch_data():
-    # 加入偽裝瀏覽器 Header，防止被 API 伺服器封鎖
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
@@ -46,7 +45,6 @@ def main():
         print("無法獲取有效開獎數據，終止發送。")
         return
 
-    # 安全解析數據結構
     latest = None
     if isinstance(data, list) and len(data) > 0:
         latest = data[0]
@@ -63,7 +61,6 @@ def main():
     issue = latest.get("issue", latest.get("expect", "未知期數"))
     result_nums = latest.get("result", latest.get("opencode", "未知結果"))
 
-    # 組合訊息
     msg = (
         f"<b>📊 PC28 最新開獎與預測通知</b>\n\n"
         f"期數：<code>{issue}</code>\n"
