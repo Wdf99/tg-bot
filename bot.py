@@ -8,72 +8,96 @@ API_URL = "https://pc28.help/api/kj.json?nbr=10"
 # ================================================
 
 def main():
-    print("開始執行腳本...")
+    print("開始執行防呆版腳本...")
     
-    history = []
+    # 預設變數
     api_countdown = "--:--"
+    history = []
     
+    # 1. 安全抓取 API 數據
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"}
         res = requests.get(API_URL, headers=headers, timeout=10)
         if res.status_code == 200:
             raw = res.json()
-            # 抓取 API 提供的即時倒數[span_4](start_span)[span_4](end_span)
+            # 獲取倒數計時[span_0](start_span)[span_0](end_span)
             api_countdown = str(raw.get("countdown", "--:--"))
             
             items = raw.get("data", [])
+            if not items and isinstance(raw, list):
+                items = raw
+                
             for item in items:
                 try:
-                    curr_issue = str(item.get("nbr", ""))[span_5](start_span)[span_5](end_span)
-                    num_str = str(item.get("number", ""))[span_6](start_span)[span_6](end_span)  # 格式如 "4+8+2=14"
+                    if not isinstance(item, dict):
+                        continue
+                    curr_issue = str(item.get("nbr", "未知"))[span_1](start_span)[span_1](end_span)
+                    num_str = str(item.get("number", "0+0+0=0"))[span_2](start_span)[span_2](end_span)
                     
-                    # 解析和值或各球號碼
+                    # 處理如 "4+8+2=14" 的字串
                     if "=" in num_str:
-                        parts = num_str.split("=")
-                        formula_part = parts[0] # "4+8+2"
-                        nums = [int(x) for x in formula_part.split("+") if x.strip().isdigit()]
-                        if len(nums) == 3:
-                            history.append({
-                                "expect": curr_issue,
-                                "nums": nums,
-                                "sum": sum(nums)
-                            })
+                        formula_part = num_str.split("=")[0]
+                        nums = [int(x.strip()) for x in formula_part.split("+") if x.strip().isdigit()]
+                    else:
+                        nums = [int(x.strip()) for x in num_str.replace(",", "+").split("+") if x.strip().isdigit()]
+                        
+                    if len(nums) >= 3:
+                        history.append({
+                            "expect": curr_issue,
+                            "nums": nums[:3],
+                            "sum": sum(nums[:3])
+                        })
                 except Exception:
                     continue
     except Exception as e:
-        print(f"抓取 API 發生錯誤: {e}")
+        print(f"API 連線或解析警告: {e}")
 
-    if not history:
-        print("沒有足夠的歷史數據")
-        return
+    # 2. 準備顯示的期號與戰績
+    issue = "最新"
+    nums_str = "0 - 0 - 0"
+    total_sum = "0"
+    
+    if history:
+        latest = history[0]
+        issue = latest["expect"]
+        nums_str = " - ".join(map(str, latest["nums"]))
+        total_sum = str(latest["sum"])
 
-    latest = history[0]
-    current_issue = int(latest["expect"]) if latest["expect"].isdigit() else 3487540
-    next_issue = current_issue + 1
+    try:
+        next_issue = str(int(issue) + 1) if issue.isdigit() else "下一期"
+    except Exception:
+        next_issue = "下一期"
 
-    # 模擬戰績回測列表
+    # 3. 建立最近幾期回測戰績文字
     history_records = []
     for i in range(1, min(6, len(history) + 1)):
         h = history[i-1]
         history_records.append(f"第 {h['expect']} 期：和值 {h['sum']} ({' - '.join(map(str, h['nums']))}) ✅")
+    
+    history_text = "\n".join(history_records) if history_records else "暂无近期战绩记录"
 
-    history_text = "\n".join(history_records)
-
-    # 計算 ABC 5 碼預測
+    # 4. 計算 ABC 5 碼預測
     def get_pred(pos):
-        count = [0] * 10
-        for h in history:
-            n = h["nums"][pos]
-            if 0 <= n <= 9: count[n] += 1
-        arr = [{"n": n, "c": count[n]} for n in range(10)]
-        arr.sort(key=lambda x: (-x["c"], x["n"]))
-        return " ".join([str(x["n"]) for x in arr[:5]])
+        try:
+            if not history:
+                return "0 1 2 3 4"
+            count = [0] * 10
+            for h in history:
+                if len(h["nums"]) > pos:
+                    n = h["nums"][pos]
+                    if 0 <= n <= 9: 
+                        count[n] += 1
+            arr = [{"n": n, "c": count[n]} for n in range(10)]
+            arr.sort(key=lambda x: (-x["c"], x["n"]))
+            return " ".join([str(x["n"]) for x in arr[:5]])
+        except Exception:
+            return "0 1 2 3 4"
 
     str_a = get_pred(0)
     str_b = get_pred(1)
     str_c = get_pred(2)
 
-    # 組裝最終發送訊息
+    # 5. 組裝 Telegram 訊息
     msg = (
         f"<b>📊 ABC球綜合智能演算法</b>\n"
         f"当前算法：多維頻率與遺漏模型 (100%)\n"
@@ -84,10 +108,10 @@ def main():
         f"🔵 <b>A 球 5 碼：</b> <code>{str_a}</code>\n"
         f"🟣 <b>B 球 5 碼：</b> <code>{str_b}</code>\n"
         f"🟢 <b>C 球 5 碼：</b> <code>{str_c}</code>\n"
-        f"⏱ <b>下期倒計時：</b> <code>{api_countdown}</code>[span_7](start_span)[span_7](end_span)"
+        f"⏱ <b>下期倒計時：</b> <code>{api_countdown}</code>[span_3](start_span)[span_3](end_span)"
     )
 
-    # 發送到 Telegram
+    # 6. 強制發送至 Telegram（附帶完整除錯）
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
@@ -95,8 +119,11 @@ def main():
         "parse_mode": "HTML"
     }
     
-    response = requests.post(url, json=payload, timeout=10)
-    print(f"Telegram 回應: {response.text}")
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        print(f"Telegram 發送結果回應: {response.text}")
+    except Exception as e:
+        print(f"發送 Telegram 發生嚴重例外: {e}")
 
 if __name__ == "__main__":
     main()
