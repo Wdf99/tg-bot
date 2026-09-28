@@ -3,7 +3,9 @@ import json
 
 # ==================== 設定區 ====================
 TELEGRAM_BOT_TOKEN = "8609140332:AAFw48FjbJSEc0LDhE1C5UFUdt-B5BEjolc"
-CHAT_ID = "-5478933926"
+CHAT_ID = "-1004343189687"              # 超級群組 ID
+THREAD_ID = 4343189687                  # 話題/子頻道 ID
+ALT_CHAT_ID = "-5478933926"             # 備用原始群組 ID
 API_URL = "https://pc28.help/api/kj.json?nbr=120"
 # ================================================
 
@@ -25,19 +27,35 @@ def fetch_data():
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
+    
+    # 嘗試方式 1: 指定話題 ID 發送
+    payload1 = {
         "chat_id": CHAT_ID,
+        "message_thread_id": THREAD_ID,
         "text": message,
         "parse_mode": "HTML"
     }
     try:
-        response = requests.post(url, json=payload, timeout=10)
-        res_data = response.json()
-        print(f"Telegram API 回應: {res_data}")
-        if not res_data.get("ok"):
-            print(f"Telegram 發送失敗原因: {res_data.get('description')}")
+        print("正在嘗試發送到話題 ID...")
+        res1 = requests.post(url, json=payload1, timeout=10).json()
+        print(f"話題發送結果: {res1}")
+        if res1.get("ok"):
+            return
     except Exception as e:
-        print(f"發送 Telegram 訊息時發生異常: {e}")
+        print(f"話題發送異常: {e}")
+
+    # 嘗試方式 2: 使用備用群組 ID 發送
+    payload2 = {
+        "chat_id": ALT_CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+    try:
+        print("正在嘗試備用 Chat ID...")
+        res2 = requests.post(url, json=payload2, timeout=10).json()
+        print(f"備用 Chat ID 發送結果: {res2}")
+    except Exception as e:
+        print(f"備用 Chat ID 發送異常: {e}")
 
 def main():
     data = fetch_data()
