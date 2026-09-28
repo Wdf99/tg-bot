@@ -1,8 +1,8 @@
-import requests
+ import requests
 import time
 
 # ==================== 設定區 ====================
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # 請替換成你的 Bot Token
+TELEGRAM_BOT_TOKEN = "8609140332:AAFw48FjbJSEc0LDhE1C5UFUdt-B5BEjolc"
 CHAT_ID = "@Abcyca"                             # Telegram 群組或頻道 ID
 API_URL = "https://pc28.help/api/kj.json?nbr=120"
 # ================================================
@@ -62,4 +62,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
