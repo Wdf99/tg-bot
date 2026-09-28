@@ -3,7 +3,7 @@ import time
 
 # ==================== 設定區 ====================
 TELEGRAM_BOT_TOKEN = "8609140332:AAFw48FjbJSEc0LDhE1C5UFUdt-B5BEjolc"
-CHAT_ID = "@Abcyca"                             # Telegram 群組或頻道 ID
+CHAT_ID = "-1004343189687"                       # 已替換為你群組的真實數字 ID
 API_URL = "https://pc28.help/api/kj.json?nbr=120"
 # ================================================
 
