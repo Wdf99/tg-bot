@@ -5,22 +5,21 @@ import json
 TELEGRAM_BOT_TOKEN = "8609140332:AAFw48FjbJSEc0LDhE1C5UFUdt-B5BEjolc"
 CHAT_ID = "-1004343189687"
 API_URL = "https://pc28.help/api/kj.json?nbr=10"
+WEB_URL = "https://pc28.help"  # 點擊按鈕後開啟的即時開獎與倒數網頁
 # ================================================
 
 def main():
-    print("開始執行防呆版腳本...")
+    print("開始執行帶按鈕的機器人腳本...")
     
-    # 預設變數
     api_countdown = "--:--"
     history = []
     
-    # 1. 安全抓取 API 數據
+    # 1. 抓取 API 數據
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"}
         res = requests.get(API_URL, headers=headers, timeout=10)
         if res.status_code == 200:
             raw = res.json()
-            # 獲取倒數計時[span_0](start_span)[span_0](end_span)
             api_countdown = str(raw.get("countdown", "--:--"))
             
             items = raw.get("data", [])
@@ -31,10 +30,9 @@ def main():
                 try:
                     if not isinstance(item, dict):
                         continue
-                    curr_issue = str(item.get("nbr", "未知"))[span_1](start_span)[span_1](end_span)
-                    num_str = str(item.get("number", "0+0+0=0"))[span_2](start_span)[span_2](end_span)
+                    curr_issue = str(item.get("nbr", "未知"))
+                    num_str = str(item.get("number", "0+0+0=0"))
                     
-                    # 處理如 "4+8+2=14" 的字串
                     if "=" in num_str:
                         formula_part = num_str.split("=")[0]
                         nums = [int(x.strip()) for x in formula_part.split("+") if x.strip().isdigit()]
@@ -50,25 +48,20 @@ def main():
                 except Exception:
                     continue
     except Exception as e:
-        print(f"API 連線或解析警告: {e}")
+        print(f"API 連線警告: {e}")
 
-    # 2. 準備顯示的期號與戰績
+    # 2. 準備期號與戰績
     issue = "最新"
-    nums_str = "0 - 0 - 0"
-    total_sum = "0"
-    
     if history:
         latest = history[0]
         issue = latest["expect"]
-        nums_str = " - ".join(map(str, latest["nums"]))
-        total_sum = str(latest["sum"])
 
     try:
         next_issue = str(int(issue) + 1) if issue.isdigit() else "下一期"
     except Exception:
         next_issue = "下一期"
 
-    # 3. 建立最近幾期回測戰績文字
+    # 3. 建立歷史戰績列表
     history_records = []
     for i in range(1, min(6, len(history) + 1)):
         h = history[i-1]
@@ -97,7 +90,7 @@ def main():
     str_b = get_pred(1)
     str_c = get_pred(2)
 
-    # 5. 組裝 Telegram 訊息
+    # 5. 組裝訊息
     msg = (
         f"<b>📊 ABC球綜合智能演算法</b>\n"
         f"当前算法：多維頻率與遺漏模型 (100%)\n"
@@ -108,22 +101,32 @@ def main():
         f"🔵 <b>A 球 5 碼：</b> <code>{str_a}</code>\n"
         f"🟣 <b>B 球 5 碼：</b> <code>{str_b}</code>\n"
         f"🟢 <b>C 球 5 碼：</b> <code>{str_c}</code>\n"
-        f"⏱ <b>下期倒計時：</b> <code>{api_countdown}</code>[span_3](start_span)[span_3](end_span)"
+        f"⏱ <b>當前 API 參考倒數：</b> <code>{api_countdown}</code>"
     )
 
-    # 6. 強制發送至 Telegram（附帶完整除錯）
+    # 6. 發送至 Telegram（附加內嵌網頁按鈕）
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
         "text": msg,
-        "parse_mode": "HTML"
+        "parse_mode": "HTML",
+        "reply_markup": {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "🌐 點擊開啟即時開獎與動態倒數大屏",
+                        "url": WEB_URL
+                    }
+                ]
+            ]
+        }
     }
     
     try:
         response = requests.post(url, json=payload, timeout=10)
-        print(f"Telegram 發送結果回應: {response.text}")
+        print(f"Telegram 發送結果: {response.text}")
     except Exception as e:
-        print(f"發送 Telegram 發生嚴重例外: {e}")
+        print(f"發送發生例外: {e}")
 
 if __name__ == "__main__":
     main()
