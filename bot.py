@@ -1,15 +1,33 @@
 import requests
 import json
+import os
 
 # ==================== 設定區 ====================
 TELEGRAM_BOT_TOKEN = "8609140332:AAFw48FjbJSEc0LDhE1C5UFUdt-B5BEjolc"
 CHAT_ID = "-1004343189687"
 API_URL = "https://pc28.help/api/kj.json?nbr=10"
-WEB_URL = "https://pc28.help"  # 點擊按鈕後開啟的即時開獎與倒數網頁
+# 用來記錄上一則訊息 ID 的檔案（讓 GitHub Actions 每次跑的時候知道要編輯哪一則訊息）
+MESSAGE_ID_FILE = "last_msg_id.txt"
 # ================================================
 
+def get_last_message_id():
+    if os.path.exists(MESSAGE_ID_FILE):
+        try:
+            with open(MESSAGE_ID_FILE, "r") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return None
+
+def save_last_message_id(msg_id):
+    try:
+        with open(MESSAGE_ID_FILE, "w") as f:
+            f.write(str(msg_id))
+    except Exception:
+        pass
+
 def main():
-    print("開始執行帶按鈕的機器人腳本...")
+    print("開始執行動態倒數更新腳本...")
     
     api_countdown = "--:--"
     history = []
@@ -90,9 +108,9 @@ def main():
     str_b = get_pred(1)
     str_c = get_pred(2)
 
-    # 5. 組裝訊息
+    # 5. 組裝訊息內容
     msg = (
-        f"<b>📊 ABC球綜合智能演算法</b>\n"
+        f"<b>📊 ABC球綜合智能演算法 (實時更新)</b>\n"
         f"当前算法：多維頻率與遺漏模型 (100%)\n"
         f"----------------------------------------\n"
         f"{history_text}\n"
@@ -101,30 +119,45 @@ def main():
         f"🔵 <b>A 球 5 碼：</b> <code>{str_a}</code>\n"
         f"🟣 <b>B 球 5 碼：</b> <code>{str_b}</code>\n"
         f"🟢 <b>C 球 5 碼：</b> <code>{str_c}</code>\n"
-        f"⏱ <b>當前 API 參考倒數：</b> <code>{api_countdown}</code>"
+        f"⏱ <b>即時開獎倒計時：</b> <code>{api_countdown}</code>"
     )
 
-    # 6. 發送至 Telegram（附加內嵌網頁按鈕）
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    # 6. 檢查是否已有上一則訊息，若有則直接「編輯」它，否則發送新訊息
+    last_msg_id = get_last_message_id()
+    
+    if last_msg_id:
+        # 嘗試編輯上一則訊息
+        edit_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/editMessageText"
+        payload = {
+            "chat_id": CHAT_ID,
+            "message_id": int(last_msg_id),
+            "text": msg,
+            "parse_mode": "HTML"
+        }
+        response = requests.post(edit_url, json=payload, timeout=10)
+        res_data = response.json()
+        
+        if res_data.get("ok"):
+            print("成功即時更新（編輯）上一則倒數訊息！")
+            return
+        else:
+            print(f"編輯失敗（可能訊息被刪除或過期），改為發送新訊息: {res_data}")
+
+    # 如果沒有上一則訊息或編輯失敗，則發送全新的一則
+    send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
         "text": msg,
-        "parse_mode": "HTML",
-        "reply_markup": {
-            "inline_keyboard": [
-                [
-                    {
-                        "text": "🌐 點擊開啟即時開獎與動態倒數大屏",
-                        "url": WEB_URL
-                    }
-                ]
-            ]
-        }
+        "parse_mode": "HTML"
     }
     
     try:
-        response = requests.post(url, json=payload, timeout=10)
-        print(f"Telegram 發送結果: {response.text}")
+        response = requests.post(send_url, json=payload, timeout=10)
+        res_data = response.json()
+        if res_data.get("ok"):
+            new_msg_id = res_data["result"]["message_id"]
+            save_last_message_id(new_msg_id)
+            print("成功發送新訊息並記錄 ID！")
     except Exception as e:
         print(f"發送發生例外: {e}")
 
