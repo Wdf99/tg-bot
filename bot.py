@@ -3,7 +3,7 @@ import json
 
 # ==================== 設定區 ====================
 TELEGRAM_BOT_TOKEN = "8609140332:AAFw48FjbJSEc0LDhE1C5UFUdt-B5BEjolc"
-CHAT_ID = "-1004343189687"                      # 使用 RawDataBot 檢測到的正確超級群組 ID
+CHAT_ID = "-1004343189687"                      # 正確的群組 ID
 API_URL = "https://pc28.help/api/kj.json?nbr=120"
 # ================================================
 
@@ -21,7 +21,11 @@ def fetch_data():
 
 def adapt_history_data(raw):
     if not raw:
-        return []
+        return [], None
+    
+    # 提取 API 提供的倒數計時
+    api_countdown = raw.get("countdown", "--")
+
     items = raw if isinstance(raw, list) else raw.get("data", raw.get("list", [raw]))
     history = []
     for item in items:
@@ -35,7 +39,7 @@ def adapt_history_data(raw):
                 history.append({"expect": issue, "nums": nums, "sum": sum(nums)})
         except Exception:
             continue
-    return history
+    return history, api_countdown
 
 def generate_position_prediction(history, pos):
     if len(history) < 10:
@@ -65,14 +69,12 @@ def send_telegram_message(message):
         response = requests.post(url, json=payload, timeout=10)
         res_data = response.json()
         print(f"Telegram API 回應: {res_data}")
-        if not res_data.get("ok"):
-            print(f"發送失敗原因: {res_data.get('description')}")
     except Exception as e:
         print(f"發送異常: {e}")
 
 def main():
     raw_data = fetch_data()
-    history = adapt_history_data(raw_data)
+    history, api_countdown = adapt_history_data(raw_data)
     
     issue, nums_str, total_sum = "最新", "-- - -- - --", "--"
     str_a, str_b, str_c = "0 1 2 3 4", "1 2 3 4 5", "2 3 4 5 6"
@@ -105,6 +107,7 @@ def main():
         f"🔵 <b>A 球 5 碼：</b> <code>{str_a}</code>\n"
         f"🟣 <b>B 球 5 碼：</b> <code>{str_b}</code>\n"
         f"🟢 <b>C 球 5 碼：</b> <code>{str_c}</code>\n\n"
+        f"⏱ <b>距離下一期開獎：</b> <code>{api_countdown}</code>\n"
         f"🤖 <i>系統自動實時預測中...</i>"
     )
 
